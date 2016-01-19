@@ -52,7 +52,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       // for example).
       isKeyframesSelector: function(rule) {
         return rule.parent &&
-            rule.parent.type === Polymer.StyleUtil.ruleTypes.KEYFRAMES_RULE;
+            rule.parent.type === this.ruleTypes.KEYFRAMES_RULE;
       },
 
       forEachRule: function(node, styleRuleCallback, keyframesRuleCallback) {

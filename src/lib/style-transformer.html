@@ -150,7 +150,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var p$ = rule.selector.split(COMPLEX_SELECTOR_SEP);
         // we want to skip transformation of rules that appear in keyframes,
         // because they are keyframe selectors, not element selectors.
-        if (!Polymer.StyleUtil.isKeyframesSelector(rule)) {
+        if (!styleUtil.isKeyframesSelector(rule)) {
           for (var i=0, l=p$.length, p; (i<l) && (p=p$[i]); i++) {
             p$[i] = transformer.call(this, p, scope, hostScope);
           }

@@ -182,13 +182,43 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       // keyframeTransforms object is a map of keyframe names to transformer
       // functions which take in cssText and spit out transformed cssText.
       applyKeyframeTransforms: function(rule, keyframeTransforms) {
+        var input = rule.cssText;
         var output = rule.cssText;
-        if (this.rx.ANIMATION_MATCH.test(output)) {
-          for (var keyframe in keyframeTransforms) {
-            var transform = keyframeTransforms[keyframe];
-            output = transform(output);
+
+        if (rule.hasAnimations == null) {
+          // Cache whether or not the rule has any animations to begin with:
+          rule.hasAnimations = this.rx.ANIMATION_MATCH.test(input);
+        }
+
+        // If there are no animations referenced, we can skip transforms:
+        if (rule.hasAnimations) {
+          var transform;
+          // If we haven't transformed this rule before, we iterate over all
+          // transforms:
+          if (rule.keyframeNamesToTransform == null) {
+            rule.keyframeNamesToTransform = [];
+
+            for (var keyframe in keyframeTransforms) {
+              transform = keyframeTransforms[keyframe];
+              output = transform(input);
+              // If the transform actually changed the CSS text, we cache the
+              // transform name for future use:
+              if (input !== output) {
+                input = output;
+                rule.keyframeNamesToTransform.push(keyframe);
+              }
+            }
+          } else {
+            // If we already have a list of keyframe names that apply to this
+            // rule, we apply only those keyframe name transforms:
+            for (var i = 0; i < rule.keyframeNamesToTransform.length; ++i) {
+              transform = keyframeTransforms[rule.keyframeNamesToTransform[i]];
+              input = transform(input);
+            }
+            output = input;
           }
         }
+
         rule.cssText = output;
       },
 
@@ -258,6 +288,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         return props;
       },
 
+
       transformStyles: function(element, properties, scopeSelector) {
         var self = this;
         var hostSelector = styleTransformer
@@ -278,9 +309,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                i < keyframesRules.length;
                keyframesRule = keyframesRules[++i]) {
             this._scopeKeyframes(keyframesRule, scopeSelector);
-            keyframeTransforms[keyframesRule.keyframesName] = function(rule, cssText) {
-              return cssText.replace(rule.keyframesNameRx, rule.transformedKeyframesName);
-            }.bind(this, keyframesRule);
+            keyframeTransforms[keyframesRule.keyframesName] =
+                this._keyframesRuleTransformer(keyframesRule);
           }
         }
 
@@ -295,6 +325,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               element._scopeCssViaAttr, scopeSelector);
           }
         });
+      },
+
+      // Generate a factory for transforming a chunk of CSS text to handle a
+      // particular scoped keyframes rule.
+      _keyframesRuleTransformer: function(keyframesRule) {
+        return function(cssText) {
+          return cssText.replace(
+              keyframesRule.keyframesNameRx,
+              keyframesRule.transformedKeyframesName);
+        };
       },
 
       // Transforms `@keyframes` names to be unique for the current host.
